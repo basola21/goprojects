@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Numbers struct {
@@ -16,19 +17,11 @@ type Results struct {
 	Result float64 `json:"result"`
 }
 
-func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/add", add)
+func calculateTwoNumbers(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/")
+	operation := strings.ToLower(path)
 
-	err := http.ListenAndServe("localhost:3000", mux)
-	if err != nil {
-		log.Fatal("server error")
-	}
-}
-
-func add(w http.ResponseWriter, r *http.Request) {
 	var numbers Numbers
-
 	if err := json.NewDecoder(r.Body).Decode(&numbers); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -40,14 +33,29 @@ func add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sum := number1 + number2
+	var result Results
 
-	result := Results{Result: sum}
+	switch operation {
+	case "add":
+		result = Results{Result: number1 + number2}
+	case "subtract":
+		result = Results{Result: number1 - number2}
+	case "multiply":
+		result = Results{Result: number1 * number2}
+	case "divid":
+		if number2 == 0 {
+			http.Error(w, "can not divide by 0", http.StatusBadRequest)
+			return
+		}
+		result = Results{Result: number1 / number2}
+	default:
+		http.Error(w, "Invalid operation", http.StatusBadRequest)
+		return
+	}
 
 	json.NewEncoder(w).Encode(&result)
 
 	w.Header().Set("Content-Type", "application/json")
-
 }
 
 func castString(s string) (float64, error) {
@@ -56,4 +64,17 @@ func castString(s string) (float64, error) {
 		return 0, err
 	}
 	return f, nil
+}
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/add", calculateTwoNumbers)
+	mux.HandleFunc("/subtract", calculateTwoNumbers)
+	mux.HandleFunc("/multiply", calculateTwoNumbers)
+	mux.HandleFunc("/divide", calculateTwoNumbers)
+
+	err := http.ListenAndServe("localhost:3000", mux)
+	if err != nil {
+		log.Fatal("server error")
+	}
 }
