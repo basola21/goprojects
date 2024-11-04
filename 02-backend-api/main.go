@@ -1,10 +1,20 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 )
+
+type Numbers struct {
+	Number1 string `json:"number1"`
+	Number2 string `json:"number2"`
+}
+
+type Results struct {
+	Result float64 `json:"result"`
+}
 
 func main() {
 	mux := http.NewServeMux()
@@ -17,13 +27,33 @@ func main() {
 }
 
 func add(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+	var numbers Numbers
+
+	if err := json.NewDecoder(r.Body).Decode(&numbers); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	number1, err := castString(numbers.Number1)
+	number2, err := castString(numbers.Number2)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	number1 := r.FormValue("nubmer1")
-	number2 := r.FormValue("nubmer2")
+	sum := number1 + number2
 
-	w.Write([]byte(fmt.Sprintf("recived these values %s %s", number1, number2)))
+	result := Results{Result: sum}
+
+	json.NewEncoder(w).Encode(&result)
+
+	w.Header().Set("Content-Type", "application/json")
+
+}
+
+func castString(s string) (float64, error) {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return f, nil
 }
