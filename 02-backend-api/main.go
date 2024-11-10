@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/basola21/02-backend-api/calculator"
+	"github.com/basola21/02-backend-api/middleware"
 )
 
 func RequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +23,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := calculator.CalculateTwoNumbers(operation, numbers)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-    return
+		return
 	}
 
 	json.NewEncoder(w).Encode(&result)
@@ -30,12 +32,18 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	rateLimitInterval := 200 * time.Millisecond
+
+	rateLimitedHandler := middleware.SimpleRateLimiter(
+		http.HandlerFunc(RequestHandler),
+		rateLimitInterval,
+	)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/add", RequestHandler)
-	mux.HandleFunc("/subtract", RequestHandler)
-	mux.HandleFunc("/multiply", RequestHandler)
-	mux.HandleFunc("/divide", RequestHandler)
-	mux.HandleFunc("/sum", RequestHandler)
+	mux.Handle("/add", rateLimitedHandler)
+	mux.Handle("/subtract", rateLimitedHandler)
+	mux.Handle("/multiply", rateLimitedHandler)
+	mux.Handle("/divide", rateLimitedHandler)
+	mux.Handle("/sum", rateLimitedHandler)
 
 	err := http.ListenAndServe("localhost:3000", mux)
 	if err != nil {
