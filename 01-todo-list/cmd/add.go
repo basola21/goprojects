@@ -25,9 +25,6 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func getLastRow() {
-}
-
 func init() {
 	rootCmd.AddCommand(addCmd)
 
