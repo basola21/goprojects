@@ -20,7 +20,6 @@ func ReadUrl(url string) {
 	fmt.Println(body)
 
 	tags := ParseHtml(body)
-	fmt.Println(tags)
 	for _, t := range tags {
 		t.PrintTags()
 	}
